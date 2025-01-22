@@ -80,16 +80,9 @@ class SearchBot():
         self, 
         chat_name: str,
         keyword: str,
-        peer: base.input_peer.InputPeer,
+        user,
         message: base.message.Message
         ) -> tuple:
-        user = (await self.get_users([
-            types.InputUserFromMessage(
-                peer=peer,
-                msg_id=message.id,
-                user_id=message.from_id.user_id
-            )
-        ]))[0]
         return (
             message.from_id.user_id, 
             user.username, 
@@ -115,13 +108,20 @@ class SearchBot():
                 messages = await self.get_messages(keyword, peer, pre_messages.count)
                 valid_messages = [message for message in messages.messages if isinstance(message.from_id, types.PeerUser)]
                 print(f"\nfound {len(valid_messages)} messages in `{chat}` chat by `{keyword}` keyword")
-                
-                # app.get_users и functions.users.GetUsers не всегда возвращает весь список(?),
-                # поэтому для точности использется get_users по отдельности
+                users = { user.id: user for user in await self.get_users([
+                    types.InputUserFromMessage(
+                        peer=peer,
+                        msg_id=message.id,
+                        user_id=message.from_id.user_id
+                    ) for message in valid_messages
+                    ])
+                }
+
                 for i, message in enumerate(valid_messages):
-                    data = await self.form_data_unit(chat, keyword, peer, message)
+                    data = await self.form_data_unit(chat, keyword, users.get(message.from_id.user_id), message)
                     self.writer.add_data(*data)
                     print(f"processed message {i + 1}/{pre_messages.count}", end="\r")
+                print(f"\nprocessed {len(valid_messages)} messages in `{chat}` chat by `{keyword}` keyword\n")
 
     def run(self) -> None:
         self.app.start()
