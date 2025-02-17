@@ -38,10 +38,3 @@ python main.py
 - Ключевые слова в `res/keywords.list` (в т.ч. словосочетания)
 
 ---
-
-### TODO
-
-- [ ] TDatas
-- [ ] > 1 bot
-- [ ] Docker
-- [ ] API

@@ -15,18 +15,15 @@ class SearchBot():
             self,
             lock: asyncio.Lock,
             username: str,
-            api_id: str,
-            api_hash: str,
+            proxy: dict,
             writer: AccessManager,
             chats: list[str],
             keywords: list[str],
         ) -> None:
         self.app: Client = Client(
             username,
-            api_id,
-            api_hash,
-            phone_number=os.environ.get("PHONE_NUMBER"),
-            workdir="sessions"
+            workdir="sessions",
+            proxy=proxy
         )
         self.writer = writer
         self.chats = chats
@@ -58,8 +55,14 @@ class SearchBot():
         self.CHANNELS_HASH[channel_name] = channel_hash
         return channel_hash
 
-    async def get_users(self, users):
-        return await self.app.invoke(functions.users.GetUsers(id=users))
+    async def get_users(self, messages, peer):
+        return await self.app.invoke(functions.users.GetUsers(id=[
+                    types.InputUserFromMessage(
+                        peer=peer,
+                        msg_id=message.id,
+                        user_id=message.from_id.user_id
+                    ) for message in messages
+                    ]))
 
     async def get_message_link(self, message, chat_name):
         if not isinstance(message.peer_id, types.peer_channel.PeerChannel): return ""
@@ -101,6 +104,7 @@ class SearchBot():
                     if not chat: continue
             except IndexError: continue
             peer = await self.app.resolve_peer(chat)
+            print(f"{peer}")
             valid_messages = []
             for keyword in self.keywords:
                 pre_messages = await self.get_messages(keyword, peer)
@@ -108,14 +112,8 @@ class SearchBot():
                 messages = await self.get_messages(keyword, peer, pre_messages.count)
                 valid_messages = [message for message in messages.messages if isinstance(message.from_id, types.PeerUser)]
                 print(f"\nfound {len(valid_messages)} messages in `{chat}` chat by `{keyword}` keyword")
-                users = { user.id: user for user in await self.get_users([
-                    types.InputUserFromMessage(
-                        peer=peer,
-                        msg_id=message.id,
-                        user_id=message.from_id.user_id
-                    ) for message in valid_messages
-                    ])
-                }
+                
+                users = {user.id: user for user in await self.get_users(valid_messages, peer)}
 
                 for i, message in enumerate(valid_messages):
                     data = await self.form_data_unit(chat, keyword, users.get(message.from_id.user_id), message)

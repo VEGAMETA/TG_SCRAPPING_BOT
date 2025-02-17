@@ -23,11 +23,17 @@ def main():
     chats = FileManager.get_data(chats_file)
     writer = XlsxManager(FILENAME, COLUMNS)
     keywords = FileManager.get_data(keywords_file)
+    proxy={
+        "scheme": os.getenv("PROXY_SCHEME"), 
+        "hostname": os.getenv("PROXY_HOSTNAME"), 
+        "port": int(os.getenv("PROXY_PORT")), 
+        "username": os.getenv("PROXY_USERNAME"), 
+        "password": os.getenv("PROXY_PASSWORD")
+    }
     bot = SearchBot(
         lock,
         USERNAME,
-        API_ID,
-        API_HASH,
+        proxy,
         writer,
         chats,
         keywords,
